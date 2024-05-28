@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Firebase JavaScript SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+  
+    const firebaseConfig = {
+      apiKey: "AIzaSyDjdjY9uBFTyEStOb32emK1yDsLvrAFKKA",
+      authDomain: "todo-list-app-3ec91.firebaseapp.com",
+      projectId: "todo-list-app-3ec91",
+      storageBucket: "todo-list-app-3ec91.appspot.com",
+      messagingSenderId: "922213855700",
+      appId: "1:922213855700:web:5accd323c9acccbe056641",
+      measurementId: "G-CB6NWTQ8VK"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore();
+    
+    // Reference to the todo collection
+    const todoRef = collection(db, 'todos');
+
+    // Add Todo Form Submission
+    document.getElementById('addTodoForm').addEventListener('submit', async function(event) {
+      event.preventDefault();
+
+      var title = document.getElementById('title').value;
+      var date = document.getElementById('date').value;
+      var time = document.getElementById('time').value;
+
+      // Combine date and time into a single DateTime object
+      var dateTime = new Date(date + 'T' + time);
+
+      try {
+        // Add todo to Firestore
+        const docRef = await addDoc(todoRef, {
+          title: title,
+          dateTime: dateTime
+        });
+        
+        console.log("Todo added with ID: ", docRef.id);
+
+        // Clear the form fields
+        document.getElementById('title').value = '';
+        document.getElementById('date').value = '';
+        document.getElementById('time').value = '';
+
+        // Close the modal
+        $('#addTodoModal').modal('hide');
+      } catch (error) {
+        console.error("Error adding todo: ", error);
+      }
+    });
+
+    // Display Todos
+    getDocs(todoRef).then((querySnapshot) => {
+      const todoList = document.getElementById('todoList');
+      todoList.innerHTML = ''; // Clear existing list
+
+      const colors = ['#FFC0CB', '#87CEFA', '#90EE90', '#FFD700', '#FFA07A', '#B0E0E6']; // Example colors
+      let colorIndex = 0;
+
+      querySnapshot.forEach((doc) => {
+        const todo = doc.data();
+        const listItem = document.createElement('li');
+        listItem.textContent = todo.title + ' - ' + todo.dateTime.toDate().toLocaleString();
+        listItem.className = 'list-group-item'; // Add list-group-item class
+        listItem.style.backgroundColor = colors[colorIndex % colors.length];
+        listItem.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'; // Add shadow
+        listItem.style.marginBottom = '10px'; // Add margin bottom
+        todoList.appendChild(listItem);
+        colorIndex++;
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="container mt-5">
+    <h1>Todo List</h1>
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addTodoModal">
+      Add Todo
+    </button>
+
+    <!-- Add Todo Modal -->
+    <div class="modal fade" id="addTodoModal" tabindex="-1" role="dialog" aria-labelledby="addTodoModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addTodoModalLabel">Add Todo</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="addTodoForm">
+              <div class="form-group">
+                <label for="title">Title</label>
+                <input type="text" class="form-control" id="title" required>
+              </div>
+              <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" class="form-control" id="date" required>
+              </div>
+              <div class="form-group">
+                <label for="time">Time</label>
+                <input type="time" class="form-control" id="time" required>
+              </div>
+              <button type="submit" class="btn btn-primary">Add Todo</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mt-3">
+      <ul id="todoList" class="list-group list-group-flush col-sm-12"></ul>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
