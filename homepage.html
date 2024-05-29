@@ -10,7 +10,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, onSnapshot, query } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
   
     const firebaseConfig = {
       apiKey: "AIzaSyDjdjY9uBFTyEStOb32emK1yDsLvrAFKKA",
@@ -26,8 +27,15 @@
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
     const db = getFirestore();
-    
-    // Reference to the todo collection
+    const auth = getAuth();
+
+    // Ensure user is logged in
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = 'index.html'; // Redirect to login if not authenticated
+      }
+    });
+
     const todoRef = collection(db, 'todos');
 
     // Add Todo Form Submission
@@ -38,55 +46,72 @@
       var date = document.getElementById('date').value;
       var time = document.getElementById('time').value;
 
-      // Combine date and time into a single DateTime object
       var dateTime = new Date(date + 'T' + time);
 
       try {
-        // Add todo to Firestore
         const docRef = await addDoc(todoRef, {
           title: title,
           dateTime: dateTime
         });
-        
+
         console.log("Todo added with ID: ", docRef.id);
 
-        // Clear the form fields
         document.getElementById('title').value = '';
         document.getElementById('date').value = '';
         document.getElementById('time').value = '';
 
-        // Close the modal
         $('#addTodoModal').modal('hide');
       } catch (error) {
         console.error("Error adding todo: ", error);
       }
     });
 
-    // Display Todos
-    getDocs(todoRef).then((querySnapshot) => {
-      const todoList = document.getElementById('todoList');
-      todoList.innerHTML = ''; // Clear existing list
+    const colors = ['#FFC0CB', '#87CEFA', '#90EE90', '#FFD700', '#FFA07A', '#B0E0E6'];
+    let colorIndex = 0;
 
-      const colors = ['#FFC0CB', '#87CEFA', '#90EE90', '#FFD700', '#FFA07A', '#B0E0E6']; // Example colors
-      let colorIndex = 0;
+    // Display Todos
+    onSnapshot(query(todoRef), (querySnapshot) => {
+      const todoList = document.getElementById('todoList');
+      todoList.innerHTML = '';
 
       querySnapshot.forEach((doc) => {
         const todo = doc.data();
         const listItem = document.createElement('li');
-        listItem.textContent = todo.title + ' - ' + todo.dateTime.toDate().toLocaleString();
-        listItem.className = 'list-group-item'; // Add list-group-item class
+        listItem.textContent = `${todo.title} - ${todo.dateTime.toDate().toLocaleString()}`;
+        listItem.className = 'list-group-item todo-card';
         listItem.style.backgroundColor = colors[colorIndex % colors.length];
-        listItem.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'; // Add shadow
-        listItem.style.marginBottom = '10px'; // Add margin bottom
+        listItem.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+        listItem.style.marginBottom = '10px';
         todoList.appendChild(listItem);
         colorIndex++;
       });
     });
+
+    // Logout Functionality
+    document.getElementById('logoutBtn').addEventListener('click', async function() {
+      try {
+        await signOut(auth);
+        window.location.href = 'index.html';
+      } catch (error) {
+        console.error('Error logging out:', error);
+      }
+    });
   </script>
+  <style>
+    .todo-card {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin-bottom: 10px;
+      padding: 15px;
+      border-radius: 8px;
+    }
+  </style>
 </head>
 <body>
   <div class="container mt-5">
-    <h1>Todo List</h1>
+    <div class="d-flex justify-content-between align-items-center">
+      <h1>Todo List</h1>
+      <button id="logoutBtn" class="btn btn-danger">Logout</button>
+    </div>
     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addTodoModal">
       Add Todo
     </button>
